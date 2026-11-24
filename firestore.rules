@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email in ['owner@example.com']; // <- your admin email(s)
+    }
+    match /settings/{id}  { allow read: if true; allow write: if isAdmin(); }
+    match /gallery/{id}   { allow read: if true; allow write: if isAdmin(); }
+    match /services/{id}  { allow read: if true; allow write: if isAdmin(); }
+    match /reviews/{id} {
+      allow read: if resource.data.approved == true || isAdmin();
+      // visitors may submit a review, but it stays hidden until approved
+      allow create: if isAdmin() || (request.resource.data.approved == false
+                       && request.resource.data.rating is int
+                       && request.resource.data.rating >= 1 && request.resource.data.rating <= 5);
+      allow update, delete: if isAdmin();
+    }
+  }
+}
